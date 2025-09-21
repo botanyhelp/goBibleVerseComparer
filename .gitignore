@@ -1,0 +1,57 @@
+# we might have local bibles in text format or zip that we do not want
+bsb.txt
+CUV_txt.tar.gz
+CUV_txt
+bsb.txt
+brb.txt
+asv.txt
+akjv.txt
+cpdv.txt
+dbt.txt
+drb.txt
+erv.txt
+jps.txt
+kjv.txt
+slt.txt
+wvt.txt
+web.txt
+ylt.txt
+*.tgz
+*.tar.gz
+*.zip
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*_test
+
+# Compiled packages
+*.a
+*.o
+
+# Go module cache
+# This is where Go stores downloaded modules.
+# It's usually located in $GOPATH/pkg/mod or a similar location.
+# You generally don't want to commit this.
+vendor/
+pkg/
+
+# Dependency directories
+# Used by some dependency management tools.
+# Deprecated in favor of Go Modules, but still seen.
+Godeps/
+_vendor/
+
+# Environment-specific files
+.env
+.DS_Store # macOS specific
+Thumbs.db # Windows specific
+
+# Build artifacts and logs
+log/
+tmp/
+*.log
+*.out
