@@ -164,57 +164,44 @@ func readBibleIntoRope(bibleOne string) (*Rope, error) {
 	return myRope, nil
 }
 
-
-
-
-
 func main() {
+	// debug true will print too much information (got love if you want it -Bob Dylan)
 	var debug bool = false
+	if debug {
+		fmt.Printf("Mr. Rogers loves you\n")
+	}
+	var bibleOne string
+	//if bibleByFile is true, then you must have the real and hardcoded kjv.txt file in the current directory
+	var bibleByFile bool = true
+	//if bibleByUrl is true, then you must pick from one of the 14 or so bible URLs in the bibles array shown in a comment somewhere
+	var bibleByUrl bool = false
+	var bibleTexts []string
+	
+	var bibleUrls [15]string = [15]string{"https://openbible.com/textfiles/bsb.txt","https://openbible.com/textfiles/brb.txt","https://openbible.com/textfiles/asv.txt","https://openbible.com/textfiles/akjv.txt","https://openbible.com/textfiles/cpdv.txt","https://openbible.com/textfiles/dbt.txt","https://openbible.com/textfiles/drb.txt","https://openbible.com/textfiles/erv.txt","https://openbible.com/textfiles/jps.txt","https://openbible.com/textfiles/kjv.txt","https://openbible.com/textfiles/slt.txt","https://openbible.com/textfiles/wvt.txt","https://openbible.com/textfiles/web.txt","https://openbible.com/textfiles/ylt.txt","https://archive.org/download/cuv_20220420/CUV_txt.tar.gz"}
+	if bibleByUrl {
+	        bibleOne = fetchBibleTextFromUrl(bibleUrls[8])
+	        bibleOne = fetchBibleTextFromUrl(bibleUrls[13])
+	}
 
-	// these were good URLs in Sept 2025
-	// the first 14 are all similar in this way
-	// 1. they have the first 2 lines of non-verse garbage to discard
-	// 2. they all have one verse line in the same format like this:
-	// #(.*) ([0-9][0-9]*):([0-9][0-9]*)\t(.*)#
-	// ..which might work with golang regexp package
-	// the last one is tar gzip but has good and uniform chinese with 13 lines of non-verse at the top of the file
-	var bibles [15]string = [15]string{"https://openbible.com/textfiles/bsb.txt","https://openbible.com/textfiles/brb.txt","https://openbible.com/textfiles/asv.txt","https://openbible.com/textfiles/akjv.txt","https://openbible.com/textfiles/cpdv.txt","https://openbible.com/textfiles/dbt.txt","https://openbible.com/textfiles/drb.txt","https://openbible.com/textfiles/erv.txt","https://openbible.com/textfiles/jps.txt","https://openbible.com/textfiles/kjv.txt","https://openbible.com/textfiles/slt.txt","https://openbible.com/textfiles/wvt.txt","https://openbible.com/textfiles/web.txt","https://openbible.com/textfiles/ylt.txt","https://archive.org/download/cuv_20220420/CUV_txt.tar.gz"}
-	//LDS
-	//https://github.com/beandog/lds-scriptures/archive/2020.12.08.zip
-	//cp /var/tmp/lds-scriptures-2020.12.08/text/kjv-scriptures.txt ~/goStuff/bibleone/
-	//https://scriptures.nephi.org/mysql
-	//SELECT vol.volume_title, b.book_title, c.chapter_number, v.scripture_text FROM volumes vol JOIN books b on b.volume_id = vol.id JOIN chapters c ON c.book_id = b.id JOIN verses v ON v.chapter_id = c.id WHERE b.book_title = 'John' AND c.chapter_number = 3 AND v.verse_number = 16;
-	//SELECT scripture_text FROM scriptures WHERE verse_title = 'John 3:16';
-	//
-	//https://scriptures.nephi.org/postgresql
-	//SELECT vol.volume_title, b.book_title, c.chapter_number, v.scripture_text FROM volumes vol JOIN books b on b.volume_id = vol.id JOIN chapters c ON c.book_id = b.id JOIN verses v ON v.chapter_id = c.id WHERE b.book_title = 'John' AND c.chapter_number = 3 AND v.verse_number = 16;
-	//SELECT scripture_text FROM scriptures WHERE verse_title = 'John 3:16';
-	for _,bible := range(bibles) {
-		if debug {
-			fmt.Printf("%s\n",bible)
+	var bibleTextFilePaths []string = []string{"testdata/kjv.txt", "testdata/web.txt"}
+	if bibleByFile {
+		//kjv.txt is entire bible but with first 2 lines are not verses
+		//kjv10.txt is first ten verses of bible
+		//var myFilePath string = "kjv10.txt"
+		for _, myFilePath := range(bibleTextFilePaths) {
+			//var myFilePath string = "testdata/kjv.txt"
+			bibleOne = fetchBibleTextFromFile(myFilePath)
+			bibleTexts = append(bibleTexts, bibleOne)
 		}
 	}
 
-	//if bibleByFile is true, then you must have the real and hardcoded kjv.txt file in the current directory
-	var bibleByFile bool = true
-	//if bibleByUrl is true, then you must pick from one of the 14 or so bible URLs in the bibles array shown above
-	var bibleByUrl bool = false
-	var bibleOne string
-	if bibleByUrl {
-	        bibleOne = fetchBibleTextFromUrl(bibles[8])
-	        bibleOne = fetchBibleTextFromUrl(bibles[13])
-	}
-	//kjv.txt is entire bible but with first 2 lines are not verses
-	//kjv10.txt is first ten verses of bible
-	//var myFilePath string = "kjv10.txt"
-	var myFilePath string = "testdata/kjv.txt"
-	if bibleByFile {
-		bibleOne = fetchBibleTextFromFile(myFilePath)
-	}
-
+	var bibleRopes []*Rope
 	var err error
-	var myRope *Rope
-	myRope, err = readBibleIntoRope(bibleOne)
+	//var myRope *Rope
+	for _, bibleOne := range(bibleTexts) {
+		myRope, _ := readBibleIntoRope(bibleOne)
+		bibleRopes = append(bibleRopes, myRope)
+	}
 
 
 	var book string
@@ -263,9 +250,11 @@ func main() {
 
 	// Print the collected values
 	fmt.Printf("You entered: %s, %d, %d\n", book, chapterNumber, verseNumber)
-	content, found := myRope.GetSegmentContent(book, chapterNumber, verseNumber)
-	if found {
-		fmt.Printf("FOUND:\n%s\n", content)
+	for bibleIndex, myRope := range(bibleRopes) {
+		content, found := myRope.GetSegmentContent(book, chapterNumber, verseNumber)
+		if found {
+			fmt.Printf("%s: %s\n", bibleTextFilePaths[bibleIndex], content)
+		}
 	}
 
 	// Adding some "segments" to our conceptual rope
@@ -320,3 +309,27 @@ func main() {
 //"https://openbible.com/textfiles/web.txt",
 //"https://openbible.com/textfiles/ylt.txt",
 //"https://archive.org/download/cuv_20220420/CUV_txt.tar.gz",
+
+//	// these were good URLs in Sept 2025
+//	// the first 14 are all similar in this way
+//	// 1. they have the first 2 lines of non-verse garbage to discard
+//	// 2. they all have one verse line in the same format like this:
+//	// #(.*) ([0-9][0-9]*):([0-9][0-9]*)\t(.*)#
+//	// ..which might work with golang regexp package
+//	// the last one is tar gzip but has good and uniform chinese with 13 lines of non-verse at the top of the file
+//	var bibles [15]string = [15]string{"https://openbible.com/textfiles/bsb.txt","https://openbible.com/textfiles/brb.txt","https://openbible.com/textfiles/asv.txt","https://openbible.com/textfiles/akjv.txt","https://openbible.com/textfiles/cpdv.txt","https://openbible.com/textfiles/dbt.txt","https://openbible.com/textfiles/drb.txt","https://openbible.com/textfiles/erv.txt","https://openbible.com/textfiles/jps.txt","https://openbible.com/textfiles/kjv.txt","https://openbible.com/textfiles/slt.txt","https://openbible.com/textfiles/wvt.txt","https://openbible.com/textfiles/web.txt","https://openbible.com/textfiles/ylt.txt","https://archive.org/download/cuv_20220420/CUV_txt.tar.gz"}
+//	//LDS
+//	//https://github.com/beandog/lds-scriptures/archive/2020.12.08.zip
+//	//cp /var/tmp/lds-scriptures-2020.12.08/text/kjv-scriptures.txt ~/goStuff/bibleone/
+//	//https://scriptures.nephi.org/mysql
+//	//SELECT vol.volume_title, b.book_title, c.chapter_number, v.scripture_text FROM volumes vol JOIN books b on b.volume_id = vol.id JOIN chapters c ON c.book_id = b.id JOIN verses v ON v.chapter_id = c.id WHERE b.book_title = 'John' AND c.chapter_number = 3 AND v.verse_number = 16;
+//	//SELECT scripture_text FROM scriptures WHERE verse_title = 'John 3:16';
+//	//
+//	//https://scriptures.nephi.org/postgresql
+//	//SELECT vol.volume_title, b.book_title, c.chapter_number, v.scripture_text FROM volumes vol JOIN books b on b.volume_id = vol.id JOIN chapters c ON c.book_id = b.id JOIN verses v ON v.chapter_id = c.id WHERE b.book_title = 'John' AND c.chapter_number = 3 AND v.verse_number = 16;
+//	//SELECT scripture_text FROM scriptures WHERE verse_title = 'John 3:16';
+//	for _,bible := range(bibles) {
+//		if debug {
+//			fmt.Printf("%s\n",bible)
+//		}
+//	}
