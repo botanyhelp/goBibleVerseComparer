@@ -1,4 +1,20 @@
 # we might have local bibles in text format or zip that we do not want
+testdata/bsb.txt
+testdata/brb.txt
+testdata/brb2.txt
+testdata/asv.txt
+testdata/akjv.txt
+testdata/cpdv.txt
+testdata/dbt.txt
+testdata/drb.txt
+testdata/erv.txt
+testdata/jps.txt
+testdata/kjv.txt
+testdata/slt.txt
+testdata/wbt.txt
+testdata/web.txt
+testdata/ylt.txt
+testdata/CUV_txt.tar.gz
 bsb.txt
 CUV_txt.tar.gz
 CUV_txt

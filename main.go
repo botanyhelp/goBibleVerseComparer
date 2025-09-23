@@ -114,54 +114,11 @@ func parseVerse(line string) []string {
 	return re.FindStringSubmatch(line)
 }
 
-func main() {
+
+func readBibleIntoRope(bibleOne string) (*Rope, error) {
 	var debug bool = false
+	// Create a Rope to hold bible verses
 	myRope := NewRope()
-
-	// these were good URLs in Sept 2025
-	// the first 14 are all similar in this way
-	// 1. they have the first 2 lines of non-verse garbage to discard
-	// 2. they all have one verse line in the same format like this:
-	// #(.*) ([0-9][0-9]*):([0-9][0-9]*)\t(.*)#
-	// ..which might work with golang regexp package
-	// the last one is tar gzip but has good and uniform chinese with 13 lines of non-verse at the top of the file
-	var bibles [15]string = [15]string{"https://openbible.com/textfiles/bsb.txt","https://openbible.com/textfiles/brb.txt","https://openbible.com/textfiles/asv.txt","https://openbible.com/textfiles/akjv.txt","https://openbible.com/textfiles/cpdv.txt","https://openbible.com/textfiles/dbt.txt","https://openbible.com/textfiles/drb.txt","https://openbible.com/textfiles/erv.txt","https://openbible.com/textfiles/jps.txt","https://openbible.com/textfiles/kjv.txt","https://openbible.com/textfiles/slt.txt","https://openbible.com/textfiles/wvt.txt","https://openbible.com/textfiles/web.txt","https://openbible.com/textfiles/ylt.txt","https://archive.org/download/cuv_20220420/CUV_txt.tar.gz"}
-	//LDS
-	//https://github.com/beandog/lds-scriptures/archive/2020.12.08.zip
-	//cp /var/tmp/lds-scriptures-2020.12.08/text/kjv-scriptures.txt ~/goStuff/bibleone/
-	//https://scriptures.nephi.org/mysql
-	//SELECT vol.volume_title, b.book_title, c.chapter_number, v.scripture_text FROM volumes vol JOIN books b on b.volume_id = vol.id JOIN chapters c ON c.book_id = b.id JOIN verses v ON v.chapter_id = c.id WHERE b.book_title = 'John' AND c.chapter_number = 3 AND v.verse_number = 16;
-	//SELECT scripture_text FROM scriptures WHERE verse_title = 'John 3:16';
-	//
-	//https://scriptures.nephi.org/postgresql
-	//SELECT vol.volume_title, b.book_title, c.chapter_number, v.scripture_text FROM volumes vol JOIN books b on b.volume_id = vol.id JOIN chapters c ON c.book_id = b.id JOIN verses v ON v.chapter_id = c.id WHERE b.book_title = 'John' AND c.chapter_number = 3 AND v.verse_number = 16;
-	//SELECT scripture_text FROM scriptures WHERE verse_title = 'John 3:16';
-
-
-
-
-	for _,bible := range(bibles) {
-		if debug {
-			fmt.Printf("%s\n",bible)
-		}
-	}
-
-	//if bibleByFile is true, then you must have the real and hardcoded kjv.txt file in the current directory
-	var bibleByFile bool = true
-	//if bibleByUrl is true, then you must pick from one of the 14 or so bible URLs in the bibles array shown above
-	var bibleByUrl bool = false
-	var bibleOne string
-	if bibleByUrl {
-	        bibleOne = fetchBibleTextFromUrl(bibles[8])
-	        bibleOne = fetchBibleTextFromUrl(bibles[13])
-	}
-	//kjv.txt is entire bible but with first 2 lines are not verses
-	//kjv10.txt is first ten verses of bible
-	//var myFilePath string = "kjv10.txt"
-	var myFilePath string = "kjv.txt"
-	if bibleByFile {
-		bibleOne = fetchBibleTextFromFile(myFilePath)
-	}
 	// Create a new reader from the string
 	stringReader := strings.NewReader(bibleOne)
 	// Create a new scanner from the string reader
@@ -184,12 +141,12 @@ func main() {
 			chapterNumber, err := strconv.Atoi(mySliceOfVerseLine[2])
 			if err != nil {
 				fmt.Println("Error converting string to int:", err)
-				return
+				return myRope, err
 			}
 			verseNumber, err := strconv.Atoi(mySliceOfVerseLine[3])
 			if err != nil {
 				fmt.Println("Error converting string to int:", err)
-				return
+				return myRope, err
 			}
 			verse := mySliceOfVerseLine[4]
 			//Does not work because Atoi returns 2 values
@@ -197,11 +154,68 @@ func main() {
 			myRope.AddSegment(book, chapterNumber, verseNumber, verse)
 		}
 	}
+
 	// Check for any errors encountered during scanning
 	if err := scanner.Err(); err != nil {
 		fmt.Printf("Error reading lines: %v\n", err)
 	}
 	fmt.Printf("We got %d lines\n", lineCount)
+
+	return myRope, nil
+}
+
+
+
+
+
+func main() {
+	var debug bool = false
+
+	// these were good URLs in Sept 2025
+	// the first 14 are all similar in this way
+	// 1. they have the first 2 lines of non-verse garbage to discard
+	// 2. they all have one verse line in the same format like this:
+	// #(.*) ([0-9][0-9]*):([0-9][0-9]*)\t(.*)#
+	// ..which might work with golang regexp package
+	// the last one is tar gzip but has good and uniform chinese with 13 lines of non-verse at the top of the file
+	var bibles [15]string = [15]string{"https://openbible.com/textfiles/bsb.txt","https://openbible.com/textfiles/brb.txt","https://openbible.com/textfiles/asv.txt","https://openbible.com/textfiles/akjv.txt","https://openbible.com/textfiles/cpdv.txt","https://openbible.com/textfiles/dbt.txt","https://openbible.com/textfiles/drb.txt","https://openbible.com/textfiles/erv.txt","https://openbible.com/textfiles/jps.txt","https://openbible.com/textfiles/kjv.txt","https://openbible.com/textfiles/slt.txt","https://openbible.com/textfiles/wvt.txt","https://openbible.com/textfiles/web.txt","https://openbible.com/textfiles/ylt.txt","https://archive.org/download/cuv_20220420/CUV_txt.tar.gz"}
+	//LDS
+	//https://github.com/beandog/lds-scriptures/archive/2020.12.08.zip
+	//cp /var/tmp/lds-scriptures-2020.12.08/text/kjv-scriptures.txt ~/goStuff/bibleone/
+	//https://scriptures.nephi.org/mysql
+	//SELECT vol.volume_title, b.book_title, c.chapter_number, v.scripture_text FROM volumes vol JOIN books b on b.volume_id = vol.id JOIN chapters c ON c.book_id = b.id JOIN verses v ON v.chapter_id = c.id WHERE b.book_title = 'John' AND c.chapter_number = 3 AND v.verse_number = 16;
+	//SELECT scripture_text FROM scriptures WHERE verse_title = 'John 3:16';
+	//
+	//https://scriptures.nephi.org/postgresql
+	//SELECT vol.volume_title, b.book_title, c.chapter_number, v.scripture_text FROM volumes vol JOIN books b on b.volume_id = vol.id JOIN chapters c ON c.book_id = b.id JOIN verses v ON v.chapter_id = c.id WHERE b.book_title = 'John' AND c.chapter_number = 3 AND v.verse_number = 16;
+	//SELECT scripture_text FROM scriptures WHERE verse_title = 'John 3:16';
+	for _,bible := range(bibles) {
+		if debug {
+			fmt.Printf("%s\n",bible)
+		}
+	}
+
+	//if bibleByFile is true, then you must have the real and hardcoded kjv.txt file in the current directory
+	var bibleByFile bool = true
+	//if bibleByUrl is true, then you must pick from one of the 14 or so bible URLs in the bibles array shown above
+	var bibleByUrl bool = false
+	var bibleOne string
+	if bibleByUrl {
+	        bibleOne = fetchBibleTextFromUrl(bibles[8])
+	        bibleOne = fetchBibleTextFromUrl(bibles[13])
+	}
+	//kjv.txt is entire bible but with first 2 lines are not verses
+	//kjv10.txt is first ten verses of bible
+	//var myFilePath string = "kjv10.txt"
+	var myFilePath string = "testdata/kjv.txt"
+	if bibleByFile {
+		bibleOne = fetchBibleTextFromFile(myFilePath)
+	}
+
+	var err error
+	var myRope *Rope
+	myRope, err = readBibleIntoRope(bibleOne)
+
 
 	var book string
 	flag.StringVar(&book, "book", "Mark", "the name of the book, Genesis, Mark, Luke, capitalized")
@@ -235,7 +249,7 @@ func main() {
 	verseNumberString, _ = reader.ReadString('\n')
 	verseNumberString = strings.TrimSpace(verseNumberString)
 
-	var err error
+	//var err error
 	chapterNumber, err = strconv.Atoi(chapterNumberString)
 	if err != nil {
 		fmt.Println("Error converting string to int:", err)

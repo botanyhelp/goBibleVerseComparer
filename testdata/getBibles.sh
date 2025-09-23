@@ -1,0 +1,15 @@
+wget https://openbible.com/textfiles/bsb.txt
+wget https://openbible.com/textfiles/brb.txt
+wget https://openbible.com/textfiles/asv.txt
+wget https://openbible.com/textfiles/akjv.txt
+wget https://openbible.com/textfiles/cpdv.txt
+wget https://openbible.com/textfiles/dbt.txt
+wget https://openbible.com/textfiles/drb.txt
+wget https://openbible.com/textfiles/erv.txt
+wget https://openbible.com/textfiles/jps.txt
+wget https://openbible.com/textfiles/kjv.txt
+wget https://openbible.com/textfiles/slt.txt
+wget https://openbible.com/textfiles/wvt.txt
+wget https://openbible.com/textfiles/web.txt
+wget https://openbible.com/textfiles/ylt.txt
+wget https://archive.org/download/cuv_20220420/CUV_txt.tar.gz
