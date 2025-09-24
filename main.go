@@ -11,6 +11,9 @@ import (
 	"regexp"
 	"strconv"
 	"flag"
+	"slices"
+	"maps"
+	"sort"
 )
 
 
@@ -62,8 +65,19 @@ func (r *Rope) GetSegmentContent(segmentID string, startIndex, endIndex int) (st
 	return "", false
 }
 
-func fetchBibleTextFromUrl(url string) string {
-	//url := "https://openbible.com/textfiles/bsb.txt"
+// fetchBibleUrls retrieves the http url argument with http.Get,
+// gets entire body with ioutil.ReadAll and returns a map[string][string]
+//that holds the title-of-bible mapped to the URL where it can be retrieved
+// we want something like this map:
+//
+// bibleTextTitles := map[string]string{
+// 	"Berean Standard Bible":  "https://bereanbible.com/bsb.txt",
+// 	"Catholic Public Domain Version": "https://bereanbible.com/cpdv.txt",
+// }
+//
+func fetchBibleUrls(url string) map[string]string {
+	//url := "https://openbible.com/textfiles/bibles.txt"
+	var debug bool = false
 
 	// Make the HTTP GET request
 	resp, err := http.Get(url)
@@ -84,13 +98,62 @@ func fetchBibleTextFromUrl(url string) string {
 	}
 
 	// Convert the byte slice to a string and print it
-	//fmt.Println(string(body))
+	//if debug { fmt.Println(string(body))}
+	var fileContent string = string(body)
+	dataMap := make(map[string]string)
+    	scanner := bufio.NewScanner(strings.NewReader(fileContent))
+    	for scanner.Scan() {
+    		line := scanner.Text()
+    		parts := strings.SplitN(line, "=", 2) // Split only on the first '='
+    		if len(parts) == 2 {
+    			key := strings.TrimSpace(parts[0])
+    			value := strings.TrimSpace(parts[1])
+    			dataMap[key] = value
+    		}
+    	}
+
+    	if err := scanner.Err(); err != nil {
+    		log.Fatalf("Error scanning file content: %v", err)
+    	}
+
+    	if debug { fmt.Println("Parsed Map:", dataMap) }
+	return dataMap
+}
+
+// fetchBibleTextFromUrl retrieves the http url argument with http.Get,
+// gets entire body with ioutil.ReadAll and returns the bible text as a string
+func fetchBibleTextFromUrl(url string) string {
+	//url := "https://openbible.com/textfiles/bsb.txt"
+        var debug bool = true
+	if debug { fmt.Printf("About to fetch %s\n", url) }
+	// Make the HTTP GET request
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatalf("Error making HTTP request: %v", err)
+	}
+	defer resp.Body.Close() // Ensure the response body is closed
+
+	// Check for a successful status code
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("Received non-OK HTTP status: %s", resp.Status)
+	}
+
+	// Read the response body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Error reading response body: %v", err)
+	}
+
+	// Convert the byte slice to a string and print it
+	//if debug { fmt.Println(string(body))}
 	return string(body)
 }
 
+
+// fetchBibleTextFromFile opens the file at the filePath argument
+// and returns the contents of the file as a string
 func fetchBibleTextFromFile(filePath string) string{
 	//filePath := "bsb.txt"
-
 	// Create a dummy file for demonstration
 	//err := os.WriteFile(filePath, []byte("Hello World!\nThis is a test file."), 0644)
 	//if err != nil {
@@ -108,13 +171,20 @@ func fetchBibleTextFromFile(filePath string) string{
 	return string(contentBytes)
 }
 
+// parseVerse uses regexp library and a hardcoded regular expression 
+// to extract and return a slice of four strings from the argument string
+// it will operate on lines like this one 
+// Genesis 1:1     In the beginning God created the heaven and the earth.
+// to extract four strings that represent these entities:
+// book chapterNumber verseNumber verse 
 func parseVerse(line string) []string {
 	pattern := `(.*) ([0-9][0-9]*):([0-9][0-9]*)\t(.*)`
 	re := regexp.MustCompile(pattern)
 	return re.FindStringSubmatch(line)
 }
 
-
+// readBibleIntoRope takes a string of an entire bible and returns 
+// a pointer to our centerpiece data structure: Rope
 func readBibleIntoRope(bibleOne string) (*Rope, error) {
 	var debug bool = false
 	// Create a Rope to hold bible verses
@@ -149,8 +219,6 @@ func readBibleIntoRope(bibleOne string) (*Rope, error) {
 				return myRope, err
 			}
 			verse := mySliceOfVerseLine[4]
-			//Does not work because Atoi returns 2 values
-			//myRope.AddSegment(mySliceOfVerseLine[0],strconv.Atoi(mySliceOfVerseLine[1]),strconv.Atoi(mySliceOfVerseLine[2]),mySliceOfVerseLine[3])
 			myRope.AddSegment(book, chapterNumber, verseNumber, verse)
 		}
 	}
@@ -167,20 +235,27 @@ func readBibleIntoRope(bibleOne string) (*Rope, error) {
 func main() {
 	// debug true will print too much information (got love if you want it -Bob Dylan)
 	var debug bool = false
-	if debug {
-		fmt.Printf("Mr. Rogers loves you\n")
-	}
+	if debug { fmt.Printf("Mr. Rogers loves you\n")}
+	
 	var bibleOne string
 	//if bibleByFile is true, then you must have the real and hardcoded kjv.txt file in the current directory
-	var bibleByFile bool = true
+	var bibleByFile bool = false
 	//if bibleByUrl is true, then you must pick from one of the 14 or so bible URLs in the bibles array shown in a comment somewhere
-	var bibleByUrl bool = false
+	var bibleByUrl bool = true
 	var bibleTexts []string
+	var bibleTitles []string
 	
-	var bibleUrls [15]string = [15]string{"https://openbible.com/textfiles/bsb.txt","https://openbible.com/textfiles/brb.txt","https://openbible.com/textfiles/asv.txt","https://openbible.com/textfiles/akjv.txt","https://openbible.com/textfiles/cpdv.txt","https://openbible.com/textfiles/dbt.txt","https://openbible.com/textfiles/drb.txt","https://openbible.com/textfiles/erv.txt","https://openbible.com/textfiles/jps.txt","https://openbible.com/textfiles/kjv.txt","https://openbible.com/textfiles/slt.txt","https://openbible.com/textfiles/wvt.txt","https://openbible.com/textfiles/web.txt","https://openbible.com/textfiles/ylt.txt","https://archive.org/download/cuv_20220420/CUV_txt.tar.gz"}
+	//var bibleUrls [2]string = [2]string{"https://openbible.com/textfiles/asv.txt","https://openbible.com/textfiles/cpdv.txt"}
+
+        bibleUrls := fetchBibleUrls("http://pennstatehousing.s3-website.us-east-2.amazonaws.com/bibles/bibles.txt")
+        if debug { fmt.Printf("bibleUrls: %v\n", bibleUrls)}
+
 	if bibleByUrl {
-	        bibleOne = fetchBibleTextFromUrl(bibleUrls[8])
-	        bibleOne = fetchBibleTextFromUrl(bibleUrls[13])
+               for bibleName, bibleURL := range(bibleUrls) {
+                       bibleOne = fetchBibleTextFromUrl(bibleURL)
+                       bibleTexts = append(bibleTexts, bibleOne)
+                       bibleTitles = append(bibleTitles, bibleName)
+               }
 	}
 
 	var bibleTextFilePaths []string = []string{"testdata/kjv.txt", "testdata/web.txt"}
@@ -197,13 +272,13 @@ func main() {
 
 	var bibleRopes []*Rope
 	var err error
-	//var myRope *Rope
 	for _, bibleOne := range(bibleTexts) {
 		myRope, _ := readBibleIntoRope(bibleOne)
 		bibleRopes = append(bibleRopes, myRope)
 	}
 
-
+	var validBooks []string = []string{"1 Chronicles","1 Corinthians","1 John","1 Kings","1 Peter","1 Samuel","1 Thessalonians","1 Timothy","2 Chronicles","2 Corinthians","2 John","2 Kings","2 Peter","2 Samuel","2 Thessalonians","2 Timothy","3 John","Acts","Amos","Colossians","Daniel","Deuteronomy","Ecclesiastes","Ephesians","Esther","Exodus","Ezekiel","Ezra","Galatians","Genesis","Habakkuk","Haggai","Hebrews","Hosea","Isaiah","James","Jeremiah","Job","Joel","John","Jonah","Joshua","Jude","Judges","Lamentations","Leviticus","Luke","Malachi","Mark","Matthew","Micah","Nahum","Nehemiah","Numbers","Obadiah","Philemon","Philippians","Proverbs","Psalm","Revelation","Romans","Ruth","Song of Solomon","Titus","Zechariah","Zephaniah",}
+	if debug { fmt.Printf("validBooks are:\n%v\n", validBooks)}
 	var book string
 	flag.StringVar(&book, "book", "Mark", "the name of the book, Genesis, Mark, Luke, capitalized")
 	var chapterNumber int
@@ -212,29 +287,114 @@ func main() {
 	flag.IntVar(&verseNumber, "verseNumber", 1, "the number of the verse, like 16 in John 3:16")
 
 	flag.Parse() // Parse command-line flags
-	fmt.Println("Based on your command-line flags we will look for %s:%d:%d\n", book, chapterNumber, verseNumber)
+	if debug { fmt.Println("Based on your command-line flags we will look for %s:%d:%d\n", book, chapterNumber, verseNumber) }
 
-	fmt.Println("Otherwise, enter some text (press Ctrl+D or Ctrl+Z and Enter to finish):")
+	if debug { fmt.Println("Otherwise, enter some text (press Ctrl+D or Ctrl+Z and Enter to finish):") }
 
 	reader := bufio.NewReader(os.Stdin)
 
-	// Prompt for and read the first value
-	fmt.Print("Enter the book, like 'Genesis' or 'Luke: ")
-	book, _ = reader.ReadString('\n')
-	book = strings.TrimSpace(book)
+	var goodBookYet bool = false
+	for !goodBookYet {
+		// Prompt for and read the first value
+		fmt.Print("Enter the book, like 'Genesis' or '2 Corinthians': ")
+		book, _ = reader.ReadString('\n')
+		book = strings.TrimSpace(book)
+		// Check if the book provided by user i" is in the slice
+		if slices.Contains(validBooks, book) {
+			goodBookYet = true
+			if debug { fmt.Printf("'%s' is in the validBooks slice.\n", book) }
+		} else {
+			fmt.Printf("%s is NOT in the list of valid books:\n%v\n\n", book, validBooks)
+		}
+	}
+
 
 	var chapterNumberString string
 	var verseNumberString string
 
-	// Prompt for and read the second value
-	fmt.Print("Enter the chapter number: ")
-	chapterNumberString, _ = reader.ReadString('\n')
-	chapterNumberString = strings.TrimSpace(chapterNumberString)
+	var goodChapterNumberYet bool = false
 
-	// Prompt for and read the third value
-	fmt.Print("Enter the verse number: ")
-	verseNumberString, _ = reader.ReadString('\n')
-	verseNumberString = strings.TrimSpace(verseNumberString)
+	// chapterNumberInt will hold chapter number which we need later to get set of verseNumber in that chapter
+	var chapterNumberInt int
+	for !goodChapterNumberYet {
+		// Prompt for and read the second value
+		fmt.Print("Enter the chapter number: ")
+		chapterNumberString, _ = reader.ReadString('\n')
+		chapterNumberString = strings.TrimSpace(chapterNumberString)
+		var firstRope *Rope = bibleRopes[0]
+		//var currentBookInRope = 
+		// Create a new set of int 
+	        chapterSet := make(map[int]bool)
+		for outerKey, innerMap := range firstRope.Segments[book] {
+			// Add elements to the set
+			chapterSet[outerKey] = true
+			if debug {
+				for innerKey, innerValue := range innerMap {
+					fmt.Printf("Outer key: %s, Inner key: %d, Value: %s\n", outerKey, innerKey, innerValue)
+				}
+			}
+		}
+
+		var chapterSetKeys []int = slices.Collect(maps.Keys(chapterSet))
+		if debug { fmt.Printf("chapterSetKeys: %v\n", chapterSetKeys) }
+		sort.Ints(chapterSetKeys)
+		if debug {fmt.Printf("sortedChapterSetKeys: %v\n", chapterSetKeys)}
+		//fmt.Printf("sortedChapterSetKeys: %v\n", sort.Ints(slices.Collect(maps.Keys(chapterSet))))
+		// Check if the book provided by user is in the set of chapters for that book
+		chapterNumberInt, _ = strconv.Atoi(chapterNumberString)
+		// Check for membership
+		_, ok := chapterSet[chapterNumberInt]
+		if ok {
+			if debug { fmt.Printf("%v is in the chapterSet %v\n", chapterNumberInt, chapterSetKeys) }
+			goodChapterNumberYet = true
+		} else {
+			//slices.Collect(maps.Keys(someMap))
+			//WORKS, but not sorted
+			//fmt.Printf("%s is NOT in the list of valid chapters of %s:\n%v\n\n", chapterNumberString,book,slices.Collect(maps.Keys(chapterSet)))
+			fmt.Printf("%s is NOT in the list of valid chapters of %s:\n%v\n\n", chapterNumberString,book,chapterSetKeys)
+		}
+		
+	}
+
+	var goodVerseNumberYet bool = false
+	for !goodVerseNumberYet {
+		// Prompt for and read the third value
+		fmt.Print("Enter the verse number: ")
+		verseNumberString, _ = reader.ReadString('\n')
+		verseNumberString = strings.TrimSpace(verseNumberString)
+		var firstRope *Rope = bibleRopes[0]
+		//var currentBookInRope = 
+		// Create a new set of int 
+	        verseSet := make(map[int]bool)
+		for outerKey, innerMap := range firstRope.Segments[book] {
+			for innerKey, innerValue := range innerMap {
+				if outerKey == chapterNumberInt {
+					// Add elements to the set
+					verseSet[innerKey] = true
+					if debug { fmt.Printf("Outer key: %s, Inner key: %d, Value: %s\n", outerKey, innerKey, innerValue)}
+				}
+			}
+		}
+		var verseSetKeys []int = slices.Collect(maps.Keys(verseSet))
+		if debug { fmt.Printf("verseSetKeys: %v\n", verseSetKeys) }
+		sort.Ints(verseSetKeys)
+		if debug {fmt.Printf("sortedVerseSetKeys: %v\n", verseSetKeys)}
+		//fmt.Printf("sortedVerseSetKeys: %v\n", verseSetKeys)
+		//fmt.Printf("sortedChapterSetKeys: %v\n", sort.Ints(slices.Collect(maps.Keys(verseSet))))
+		// Check if the book provided by user is in the set of verses for that book
+		verseNumberInt, _ := strconv.Atoi(verseNumberString)
+		// Check for membership
+		_, ok := verseSet[verseNumberInt]
+		if ok {
+			if debug { fmt.Printf("%v is in the verseSet: %v", verseNumberInt, verseSetKeys) }
+			goodVerseNumberYet = true
+		} else {
+			//slices.Collect(maps.Keys(someMap))
+			//WORKS, but not sorted
+			//fmt.Printf("%s is NOT in the list of valid verses of %s:\n%v\n\n", verseNumberString,book,slices.Collect(maps.Keys(verseSet)))
+			fmt.Printf("%s is NOT in the list of valid verse numbers of %s:%d, and so please enter a verse number from this list:\n%v\n\n", verseNumberString,book,chapterNumberInt,verseSetKeys)
+		}
+	}
 
 	//var err error
 	chapterNumber, err = strconv.Atoi(chapterNumberString)
@@ -249,13 +409,15 @@ func main() {
 	}
 
 	// Print the collected values
-	fmt.Printf("You entered: %s, %d, %d\n", book, chapterNumber, verseNumber)
+	fmt.Printf("%s %d:%d\n", book, chapterNumber, verseNumber)
 	for bibleIndex, myRope := range(bibleRopes) {
 		content, found := myRope.GetSegmentContent(book, chapterNumber, verseNumber)
 		if found {
-			fmt.Printf("%s: %s\n", bibleTextFilePaths[bibleIndex], content)
+			//fmt.Printf("%s: %s\n", bibleTextFilePaths[bibleIndex], content)
+			fmt.Printf("%s:    %s\n", content, bibleTitles[bibleIndex])
 		}
 	}
+}
 
 	// Adding some "segments" to our conceptual rope
 	//myRope.AddSegment("2 Samuel", 13, 28, "Now Absalom had commanded his servants, saying, Mark ye now when Amnon’s heart is merry with wine, and when I say unto you, Smite Amnon; then kill him, fear not: have not I commanded you? be courageous, and be valiant.")
@@ -290,10 +452,6 @@ func main() {
 	//	fmt.Printf("Segment 'Genesis': %s\n", content4)
 	//}
 
-	// This example demonstrates the *structure* of the map, not a full rope implementation.
-	// A complete rope would involve operations like concatenation, splitting, and substring
-	// that efficiently manipulate these segments.
-}
 //"https://openbible.com/textfiles/bsb.txt",
 //"https://openbible.com/textfiles/brb.txt",
 //"https://openbible.com/textfiles/asv.txt",
@@ -333,3 +491,14 @@ func main() {
 //			fmt.Printf("%s\n",bible)
 //		}
 //	}
+
+// fetchBibleUrls retrieves the http url argument with http.Get,
+// gets entire body with ioutil.ReadAll and returns a map[string][string]
+//that holds the title-of-bible mapped to the URL where it can be retrieved
+// we want something like this map:
+//
+// bibleTextTitles := map[string]string{
+// 	"Berean Standard Bible":  "https://bereanbible.com/bsb.txt",
+// 	"Catholic Public Domain Version": "https://bereanbible.com/cpdv.txt",
+// }
+//
