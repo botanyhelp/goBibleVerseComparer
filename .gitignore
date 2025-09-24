@@ -1,4 +1,4 @@
-# we might have local bibles in text format or zip that we do not want
+/junk/
 testdata/bsb.txt
 testdata/brb.txt
 testdata/brb2.txt
