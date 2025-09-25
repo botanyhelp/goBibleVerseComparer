@@ -14,6 +14,8 @@ import (
 	"slices"
 	"maps"
 	"sort"
+	_ "math/rand"
+	_ "time"
 )
 
 
@@ -232,6 +234,17 @@ func readBibleIntoRope(bibleOne string) (*Rope, error) {
 	return myRope, nil
 }
 
+// sayGoodbyeAndExit prints a goodbye message and then terminates the program.
+func sayGoodbyeAndExit() {
+	fmt.Println("God loves you! Goodbye! Terminating program.")
+	os.Exit(0) // Exit with status code 0, indicating success
+}
+
+// help prints some help
+func verseHelp() {
+	fmt.Println("\nAt any prompt you can type anything.  If your entry is unusable, there will be help provided.  For example if you misspell a book, like 'Jon', you will get a list of all the valid book names that you can choose from.  Likewise, if you choose a chapter number is not in the book you chose, or a verse number is not in the chapter, valid numbers will be presented.  You can always type 'quit' or 'help'.\n")
+}
+
 func main() {
 	// debug true will print too much information (got love if you want it -Bob Dylan)
 	var debug bool = false
@@ -245,16 +258,20 @@ func main() {
 	var bibleTexts []string
 	var bibleTitles []string
 	
-	//var bibleUrls [2]string = [2]string{"https://openbible.com/textfiles/asv.txt","https://openbible.com/textfiles/cpdv.txt"}
-
         bibleUrls := fetchBibleUrls("http://pennstatehousing.s3-website.us-east-2.amazonaws.com/bibles/bibles.txt")
         if debug { fmt.Printf("bibleUrls: %v\n", bibleUrls)}
 
 	if bibleByUrl {
+		// TODO: grab 2 bibles, from slice, at random
+		// or just the first 2 for now
+		var onlyTwo int = 0
                for bibleName, bibleURL := range(bibleUrls) {
-                       bibleOne = fetchBibleTextFromUrl(bibleURL)
-                       bibleTexts = append(bibleTexts, bibleOne)
-                       bibleTitles = append(bibleTitles, bibleName)
+		       onlyTwo += 1
+		       if onlyTwo < 3 {
+                           bibleOne = fetchBibleTextFromUrl(bibleURL)
+                           bibleTexts = append(bibleTexts, bibleOne)
+                           bibleTitles = append(bibleTitles, bibleName)
+			}
                }
 	}
 
@@ -293,128 +310,139 @@ func main() {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	var goodBookYet bool = false
-	for !goodBookYet {
-		// Prompt for and read the first value
-		fmt.Print("Enter the book, like 'Genesis' or '2 Corinthians': ")
-		book, _ = reader.ReadString('\n')
-		book = strings.TrimSpace(book)
-		// Check if the book provided by user i" is in the slice
-		if slices.Contains(validBooks, book) {
-			goodBookYet = true
-			if debug { fmt.Printf("'%s' is in the validBooks slice.\n", book) }
-		} else {
-			fmt.Printf("%s is NOT in the list of valid books:\n%v\n\n", book, validBooks)
+	for true {
+		var goodBookYet bool = false
+		for !goodBookYet {
+			// Prompt for and read the first value
+			fmt.Print("Type 'quit' or 'help' anytime.\n")
+			fmt.Print("Enter the book, like 'Genesis' or '2 Corinthians': ")
+			book, _ = reader.ReadString('\n')
+			book = strings.TrimSpace(book)
+			if book == "quit" { sayGoodbyeAndExit() }
+			if book == "help" { verseHelp() }
+			// Check if the book provided by user i" is in the slice
+			if slices.Contains(validBooks, book) {
+				goodBookYet = true
+				if debug { fmt.Printf("'%s' is in the validBooks slice.\n", book) }
+			} else if book == "help" {
+				fmt.Printf("\n")
+			} else {
+				fmt.Printf("%s is NOT in the list of valid books:\n%v\n\n", book, validBooks)
+			}
 		}
-	}
-
-
-	var chapterNumberString string
-	var verseNumberString string
-
-	var goodChapterNumberYet bool = false
-
-	// chapterNumberInt will hold chapter number which we need later to get set of verseNumber in that chapter
-	var chapterNumberInt int
-	for !goodChapterNumberYet {
-		// Prompt for and read the second value
-		fmt.Print("Enter the chapter number: ")
-		chapterNumberString, _ = reader.ReadString('\n')
-		chapterNumberString = strings.TrimSpace(chapterNumberString)
-		var firstRope *Rope = bibleRopes[0]
-		//var currentBookInRope = 
-		// Create a new set of int 
-	        chapterSet := make(map[int]bool)
-		for outerKey, innerMap := range firstRope.Segments[book] {
-			// Add elements to the set
-			chapterSet[outerKey] = true
-			if debug {
+	
+	
+		var chapterNumberString string
+		var verseNumberString string
+	
+		var goodChapterNumberYet bool = false
+	
+		// chapterNumberInt will hold chapter number which we need later to get set of verseNumber in that chapter
+		var chapterNumberInt int
+		for !goodChapterNumberYet {
+			// Prompt for and read the second value
+			fmt.Print("Enter the chapter number: ")
+			chapterNumberString, _ = reader.ReadString('\n')
+			chapterNumberString = strings.TrimSpace(chapterNumberString)
+			if chapterNumberString == "quit" { sayGoodbyeAndExit() }
+			if chapterNumberString == "help" { verseHelp() }
+			var firstRope *Rope = bibleRopes[0]
+			//var currentBookInRope = 
+			// Create a new set of int 
+		        chapterSet := make(map[int]bool)
+			for outerKey, innerMap := range firstRope.Segments[book] {
+				// Add elements to the set
+				chapterSet[outerKey] = true
+				if debug {
+					for innerKey, innerValue := range innerMap {
+						fmt.Printf("Outer key: %s, Inner key: %d, Value: %s\n", outerKey, innerKey, innerValue)
+					}
+				}
+			}
+	
+			var chapterSetKeys []int = slices.Collect(maps.Keys(chapterSet))
+			if debug { fmt.Printf("chapterSetKeys: %v\n", chapterSetKeys) }
+			sort.Ints(chapterSetKeys)
+			if debug {fmt.Printf("sortedChapterSetKeys: %v\n", chapterSetKeys)}
+			//fmt.Printf("sortedChapterSetKeys: %v\n", sort.Ints(slices.Collect(maps.Keys(chapterSet))))
+			// Check if the book provided by user is in the set of chapters for that book
+			chapterNumberInt, _ = strconv.Atoi(chapterNumberString)
+			// Check for membership
+			_, ok := chapterSet[chapterNumberInt]
+			if ok {
+				if debug { fmt.Printf("%v is in the chapterSet %v\n", chapterNumberInt, chapterSetKeys) }
+				goodChapterNumberYet = true
+			} else {
+				//slices.Collect(maps.Keys(someMap))
+				//WORKS, but not sorted
+				//fmt.Printf("%s is NOT in the list of valid chapters of %s:\n%v\n\n", chapterNumberString,book,slices.Collect(maps.Keys(chapterSet)))
+				fmt.Printf("%s is NOT in the list of valid chapters of %s:\n%v\n\n", chapterNumberString,book,chapterSetKeys)
+			}
+			
+		}
+	
+		var goodVerseNumberYet bool = false
+		for !goodVerseNumberYet {
+			// Prompt for and read the third value
+			fmt.Print("Enter the verse number: ")
+			verseNumberString, _ = reader.ReadString('\n')
+			verseNumberString = strings.TrimSpace(verseNumberString)
+			if verseNumberString == "quit" { sayGoodbyeAndExit() }
+			if verseNumberString == "help" { verseHelp() }
+			var firstRope *Rope = bibleRopes[0]
+			//var currentBookInRope = 
+			// Create a new set of int 
+		        verseSet := make(map[int]bool)
+			for outerKey, innerMap := range firstRope.Segments[book] {
 				for innerKey, innerValue := range innerMap {
-					fmt.Printf("Outer key: %s, Inner key: %d, Value: %s\n", outerKey, innerKey, innerValue)
+					if outerKey == chapterNumberInt {
+						// Add elements to the set
+						verseSet[innerKey] = true
+						if debug { fmt.Printf("Outer key: %s, Inner key: %d, Value: %s\n", outerKey, innerKey, innerValue)}
+					}
 				}
 			}
-		}
-
-		var chapterSetKeys []int = slices.Collect(maps.Keys(chapterSet))
-		if debug { fmt.Printf("chapterSetKeys: %v\n", chapterSetKeys) }
-		sort.Ints(chapterSetKeys)
-		if debug {fmt.Printf("sortedChapterSetKeys: %v\n", chapterSetKeys)}
-		//fmt.Printf("sortedChapterSetKeys: %v\n", sort.Ints(slices.Collect(maps.Keys(chapterSet))))
-		// Check if the book provided by user is in the set of chapters for that book
-		chapterNumberInt, _ = strconv.Atoi(chapterNumberString)
-		// Check for membership
-		_, ok := chapterSet[chapterNumberInt]
-		if ok {
-			if debug { fmt.Printf("%v is in the chapterSet %v\n", chapterNumberInt, chapterSetKeys) }
-			goodChapterNumberYet = true
-		} else {
-			//slices.Collect(maps.Keys(someMap))
-			//WORKS, but not sorted
-			//fmt.Printf("%s is NOT in the list of valid chapters of %s:\n%v\n\n", chapterNumberString,book,slices.Collect(maps.Keys(chapterSet)))
-			fmt.Printf("%s is NOT in the list of valid chapters of %s:\n%v\n\n", chapterNumberString,book,chapterSetKeys)
-		}
-		
-	}
-
-	var goodVerseNumberYet bool = false
-	for !goodVerseNumberYet {
-		// Prompt for and read the third value
-		fmt.Print("Enter the verse number: ")
-		verseNumberString, _ = reader.ReadString('\n')
-		verseNumberString = strings.TrimSpace(verseNumberString)
-		var firstRope *Rope = bibleRopes[0]
-		//var currentBookInRope = 
-		// Create a new set of int 
-	        verseSet := make(map[int]bool)
-		for outerKey, innerMap := range firstRope.Segments[book] {
-			for innerKey, innerValue := range innerMap {
-				if outerKey == chapterNumberInt {
-					// Add elements to the set
-					verseSet[innerKey] = true
-					if debug { fmt.Printf("Outer key: %s, Inner key: %d, Value: %s\n", outerKey, innerKey, innerValue)}
-				}
+			var verseSetKeys []int = slices.Collect(maps.Keys(verseSet))
+			if debug { fmt.Printf("verseSetKeys: %v\n", verseSetKeys) }
+			sort.Ints(verseSetKeys)
+			if debug {fmt.Printf("sortedVerseSetKeys: %v\n", verseSetKeys)}
+			//fmt.Printf("sortedVerseSetKeys: %v\n", verseSetKeys)
+			//fmt.Printf("sortedChapterSetKeys: %v\n", sort.Ints(slices.Collect(maps.Keys(verseSet))))
+			// Check if the book provided by user is in the set of verses for that book
+			verseNumberInt, _ := strconv.Atoi(verseNumberString)
+			// Check for membership
+			_, ok := verseSet[verseNumberInt]
+			if ok {
+				if debug { fmt.Printf("%v is in the verseSet: %v", verseNumberInt, verseSetKeys) }
+				goodVerseNumberYet = true
+			} else {
+				//slices.Collect(maps.Keys(someMap))
+				//WORKS, but not sorted
+				//fmt.Printf("%s is NOT in the list of valid verses of %s:\n%v\n\n", verseNumberString,book,slices.Collect(maps.Keys(verseSet)))
+				fmt.Printf("%s is NOT in the list of valid verse numbers of %s:%d, and so please enter a verse number from this list:\n%v\n\n", verseNumberString,book,chapterNumberInt,verseSetKeys)
 			}
 		}
-		var verseSetKeys []int = slices.Collect(maps.Keys(verseSet))
-		if debug { fmt.Printf("verseSetKeys: %v\n", verseSetKeys) }
-		sort.Ints(verseSetKeys)
-		if debug {fmt.Printf("sortedVerseSetKeys: %v\n", verseSetKeys)}
-		//fmt.Printf("sortedVerseSetKeys: %v\n", verseSetKeys)
-		//fmt.Printf("sortedChapterSetKeys: %v\n", sort.Ints(slices.Collect(maps.Keys(verseSet))))
-		// Check if the book provided by user is in the set of verses for that book
-		verseNumberInt, _ := strconv.Atoi(verseNumberString)
-		// Check for membership
-		_, ok := verseSet[verseNumberInt]
-		if ok {
-			if debug { fmt.Printf("%v is in the verseSet: %v", verseNumberInt, verseSetKeys) }
-			goodVerseNumberYet = true
-		} else {
-			//slices.Collect(maps.Keys(someMap))
-			//WORKS, but not sorted
-			//fmt.Printf("%s is NOT in the list of valid verses of %s:\n%v\n\n", verseNumberString,book,slices.Collect(maps.Keys(verseSet)))
-			fmt.Printf("%s is NOT in the list of valid verse numbers of %s:%d, and so please enter a verse number from this list:\n%v\n\n", verseNumberString,book,chapterNumberInt,verseSetKeys)
+	
+		//var err error
+		chapterNumber, err = strconv.Atoi(chapterNumberString)
+		if err != nil {
+			fmt.Println("Error converting string to int:", err)
+			return
 		}
-	}
-
-	//var err error
-	chapterNumber, err = strconv.Atoi(chapterNumberString)
-	if err != nil {
-		fmt.Println("Error converting string to int:", err)
-		return
-	}
-	verseNumber, err = strconv.Atoi(verseNumberString)
-	if err != nil {
-		fmt.Println("Error converting string to int:", err)
-		return
-	}
-
-	// Print the collected values
-	fmt.Printf("%s %d:%d\n", book, chapterNumber, verseNumber)
-	for bibleIndex, myRope := range(bibleRopes) {
-		content, found := myRope.GetSegmentContent(book, chapterNumber, verseNumber)
-		if found {
-			//fmt.Printf("%s: %s\n", bibleTextFilePaths[bibleIndex], content)
-			fmt.Printf("%s:    %s\n", content, bibleTitles[bibleIndex])
+		verseNumber, err = strconv.Atoi(verseNumberString)
+		if err != nil {
+			fmt.Println("Error converting string to int:", err)
+			return
+		}
+	
+		// Print the collected values
+		fmt.Printf("%s %d:%d\n", book, chapterNumber, verseNumber)
+		for bibleIndex, myRope := range(bibleRopes) {
+			content, found := myRope.GetSegmentContent(book, chapterNumber, verseNumber)
+			if found {
+				//fmt.Printf("%s: %s\n", bibleTextFilePaths[bibleIndex], content)
+				fmt.Printf("%s:    %s\n", content, bibleTitles[bibleIndex])
+			}
 		}
 	}
 }
