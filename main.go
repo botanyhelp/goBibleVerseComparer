@@ -314,7 +314,7 @@ func main() {
 		var goodBookYet bool = false
 		for !goodBookYet {
 			// Prompt for and read the first value
-			fmt.Print("Type 'quit' or 'help' anytime.\n")
+			fmt.Print("\nType 'quit' or 'help' anytime.\n")
 			fmt.Print("Enter the book, like 'Genesis' or '2 Corinthians': ")
 			book, _ = reader.ReadString('\n')
 			book = strings.TrimSpace(book)
@@ -327,7 +327,7 @@ func main() {
 			} else if book == "help" {
 				fmt.Printf("\n")
 			} else {
-				fmt.Printf("%s is NOT in the list of valid books:\n%v\n\n", book, validBooks)
+				fmt.Printf("%s is NOT in the list of valid books, which are shown here:\n%v\n\n", book, validBooks)
 			}
 		}
 	
@@ -376,7 +376,7 @@ func main() {
 				//slices.Collect(maps.Keys(someMap))
 				//WORKS, but not sorted
 				//fmt.Printf("%s is NOT in the list of valid chapters of %s:\n%v\n\n", chapterNumberString,book,slices.Collect(maps.Keys(chapterSet)))
-				fmt.Printf("%s is NOT in the list of valid chapters of %s:\n%v\n\n", chapterNumberString,book,chapterSetKeys)
+				fmt.Printf("%s is NOT in the list of valid chapters of %s, which are shown here:\n%v\n\n", chapterNumberString,book,chapterSetKeys)
 			}
 			
 		}
