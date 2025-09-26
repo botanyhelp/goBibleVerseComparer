@@ -126,7 +126,7 @@ func fetchBibleUrls(url string) map[string]string {
 // gets entire body with ioutil.ReadAll and returns the bible text as a string
 func fetchBibleTextFromUrl(url string) string {
 	//url := "https://openbible.com/textfiles/bsb.txt"
-        var debug bool = true
+        var debug bool = false
 	if debug { fmt.Printf("About to fetch %s\n", url) }
 	// Make the HTTP GET request
 	resp, err := http.Get(url)
