@@ -241,8 +241,9 @@ func sayGoodbyeAndExit() {
 }
 
 // help prints some help
-func verseHelp() {
-	fmt.Println("\nAt any prompt you can type anything.  If your entry is unusable, there will be help provided.  For example if you misspell a book, like 'Jon', you will get a list of all the valid book names that you can choose from.  Likewise, if you choose a chapter number is not in the book you chose, or a verse number is not in the chapter, valid numbers will be presented.  You can always type 'quit' or 'help'.\n")
+func verseHelp() string {
+	//fmt.Println("\nAt any prompt you can type anything.  If your entry is unusable, there will be help provided.  For example if you misspell a book, like 'Jon', you will get a list of all the valid book names that you can choose from.  Likewise, if you choose a chapter number is not in the book you chose, or a verse number is not in the chapter, valid numbers will be presented.  You can always type 'quit' or 'help'.\n")
+	return "\nAt any prompt you can type anything.  If your entry is unusable, there will be help provided.  For example if you misspell a book, like 'Jon', you will get a list of all the valid book names that you can choose from.  Likewise, if you choose a chapter number is not in the book you chose, or a verse number is not in the chapter, valid numbers will be presented.  You can always type 'quit' or 'help'.\n"
 }
 
 func main() {
@@ -319,7 +320,7 @@ func main() {
 			book, _ = reader.ReadString('\n')
 			book = strings.TrimSpace(book)
 			if book == "quit" { sayGoodbyeAndExit() }
-			if book == "help" { verseHelp() }
+			if book == "help" { fmt.Printf("%s", verseHelp()) }
 			// Check if the book provided by user i" is in the slice
 			if slices.Contains(validBooks, book) {
 				goodBookYet = true
@@ -345,7 +346,8 @@ func main() {
 			chapterNumberString, _ = reader.ReadString('\n')
 			chapterNumberString = strings.TrimSpace(chapterNumberString)
 			if chapterNumberString == "quit" { sayGoodbyeAndExit() }
-			if chapterNumberString == "help" { verseHelp() }
+			//if chapterNumberString == "help" { verseHelp() }
+			if chapterNumberString == "help" { fmt.Printf("%s", verseHelp()) }
 			var firstRope *Rope = bibleRopes[0]
 			//var currentBookInRope = 
 			// Create a new set of int 
@@ -388,7 +390,8 @@ func main() {
 			verseNumberString, _ = reader.ReadString('\n')
 			verseNumberString = strings.TrimSpace(verseNumberString)
 			if verseNumberString == "quit" { sayGoodbyeAndExit() }
-			if verseNumberString == "help" { verseHelp() }
+			//if verseNumberString == "help" { verseHelp() }
+			if verseNumberString == "help" { fmt.Printf("%s", verseHelp()) }
 			var firstRope *Rope = bibleRopes[0]
 			//var currentBookInRope = 
 			// Create a new set of int 
